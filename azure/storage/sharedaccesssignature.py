@@ -19,6 +19,7 @@ import urllib2
 
 #-------------------------------------------------------------------------
 # Constants for the share access signature
+SIGNED_VERSION = 'sv'
 SIGNED_START = 'st'
 SIGNED_EXPIRY = 'se'
 SIGNED_RESOURCE = 'sr'
@@ -30,13 +31,15 @@ RESOURCE_CONTAINER = 'c'
 SIGNED_RESOURCE_TYPE = 'resource'
 SHARED_ACCESS_PERMISSION = 'permission'
 
+SAS_VERSION = '2012-02-12'
+
 #--------------------------------------------------------------------------
 class WebResource:
-    ''' 
+    '''
     Class that stands for the resource to get the share access signature
 
     path: the resource path.
-    properties: dict of name and values. Contains 2 item: resource type and 
+    properties: dict of name and values. Contains 2 item: resource type and
             permission
     request_url: the url of the webresource include all the queries.
     '''
@@ -47,12 +50,12 @@ class WebResource:
         self.request_url = request_url
 
 class Permission:
-    ''' 
+    '''
     Permission class. Contains the path and query_string for the path.
 
     path: the resource path
     query_string: dict of name, values. Contains SIGNED_START, SIGNED_EXPIRY
-            SIGNED_RESOURCE, SIGNED_PERMISSION, SIGNED_IDENTIFIER, 
+            SIGNED_RESOURCE, SIGNED_PERMISSION, SIGNED_IDENTIFIER,
             SIGNED_SIGNATURE name values.
     '''
     def __init__(self, path=None, query_string=None):
@@ -66,9 +69,9 @@ class SharedAccessPolicy:
         self.access_policy = access_policy
 
 class SharedAccessSignature:
-    ''' 
-    The main class used to do the signing and generating the signature. 
-    
+    '''
+    The main class used to do the signing and generating the signature.
+
     account_name: the storage account name used to generate shared access signature
     account_key: the access key to genenerate share access signature
     permission_set: the permission cache used to signed the request url.
@@ -80,8 +83,8 @@ class SharedAccessSignature:
         self.permission_set = permission_set
 
     def generate_signed_query_string(self, path, resource_type, shared_access_policy):
-        ''' 
-        Generates the query string for path, resource type and shared access policy. 
+        '''
+        Generates the query string for path, resource type and shared access policy.
 
         path: the resource
         resource_type: could be blob or container
@@ -89,9 +92,10 @@ class SharedAccessSignature:
         '''
 
         query_string = {}
+        query_string[SIGNED_VERSION] = SAS_VERSION
         if shared_access_policy.access_policy.start:
             query_string[SIGNED_START] = shared_access_policy.access_policy.start
-        
+
         query_string[SIGNED_EXPIRY] = shared_access_policy.access_policy.expiry
         query_string[SIGNED_RESOURCE] = resource_type
         query_string[SIGNED_PERMISSION] = shared_access_policy.access_policy.permission
@@ -107,8 +111,8 @@ class SharedAccessSignature:
 
         if self.permission_set:
             for shared_access_signature in self.permission_set:
-                if self._permission_matches_request(shared_access_signature, web_resource, 
-                                                    web_resource.properties[SIGNED_RESOURCE_TYPE], 
+                if self._permission_matches_request(shared_access_signature, web_resource,
+                                                    web_resource.properties[SIGNED_RESOURCE_TYPE],
                                                     web_resource.properties[SHARED_ACCESS_PERMISSION]):
                     if web_resource.request_url.find('?') == -1:
                         web_resource.request_url += '?'
@@ -123,6 +127,7 @@ class SharedAccessSignature:
         ''' Converts query string to str. The order of name, values is very import and can't be wrong.'''
 
         convert_str = ''
+        convert_str += 'sv=' + SAS_VERSION + '&'
         if query_string.has_key(SIGNED_START):
             convert_str += SIGNED_START + '=' + query_string[SIGNED_START] + '&'
         convert_str += SIGNED_EXPIRY + '=' + query_string[SIGNED_EXPIRY] + '&'
@@ -150,13 +155,14 @@ class SharedAccessSignature:
 
         canonicalized_resource = '/' + self.account_name + path;
 
-        #form the string to sign from shared_access_policy and canonicalized resource. 
+        #form the string to sign from shared_access_policy and canonicalized resource.
         #The order of values is important.
-        string_to_sign = (get_value_to_append(shared_access_policy.access_policy.permission) + 
+        string_to_sign = (get_value_to_append(shared_access_policy.access_policy.permission) +
                           get_value_to_append(shared_access_policy.access_policy.start) +
-                          get_value_to_append(shared_access_policy.access_policy.expiry) + 
+                          get_value_to_append(shared_access_policy.access_policy.expiry) +
                           get_value_to_append(canonicalized_resource) +
-                          get_value_to_append(shared_access_policy.id, True))
+                          get_value_to_append(shared_access_policy.id) +
+                          SAS_VERSION)
 
         return self._sign(string_to_sign)
 
