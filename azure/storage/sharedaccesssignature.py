@@ -19,6 +19,7 @@ import urllib2
 
 #-------------------------------------------------------------------------
 # Constants for the share access signature
+SIGNED_VERSION = 'sv'
 SIGNED_START = 'st'
 SIGNED_EXPIRY = 'se'
 SIGNED_RESOURCE = 'sr'
@@ -29,6 +30,8 @@ RESOURCE_BLOB = 'b'
 RESOURCE_CONTAINER = 'c'
 SIGNED_RESOURCE_TYPE = 'resource'
 SHARED_ACCESS_PERMISSION = 'permission'
+
+SAS_VERSION = '2012-02-12'
 
 #--------------------------------------------------------------------------
 class WebResource:
@@ -89,6 +92,7 @@ class SharedAccessSignature:
         '''
 
         query_string = {}
+        query_string[SIGNED_VERSION] = SAS_VERSION
         if shared_access_policy.access_policy.start:
             query_string[SIGNED_START] = shared_access_policy.access_policy.start
 
@@ -123,6 +127,7 @@ class SharedAccessSignature:
         ''' Converts query string to str. The order of name, values is very import and can't be wrong.'''
 
         convert_str = ''
+        convert_str += 'sv=' + SAS_VERSION + '&'
         if query_string.has_key(SIGNED_START):
             convert_str += SIGNED_START + '=' + query_string[SIGNED_START] + '&'
         convert_str += SIGNED_EXPIRY + '=' + query_string[SIGNED_EXPIRY] + '&'
@@ -156,7 +161,8 @@ class SharedAccessSignature:
                           get_value_to_append(shared_access_policy.access_policy.start) +
                           get_value_to_append(shared_access_policy.access_policy.expiry) +
                           get_value_to_append(canonicalized_resource) +
-                          get_value_to_append(shared_access_policy.id, True))
+                          get_value_to_append(shared_access_policy.id) +
+                          SAS_VERSION)
 
         return self._sign(string_to_sign)
 
